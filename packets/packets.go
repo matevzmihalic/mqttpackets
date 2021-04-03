@@ -52,6 +52,14 @@ type (
 		Content Packet
 		FixedHeader
 	}
+
+	Version byte
+)
+
+const (
+	MQTTv31  Version = 3
+	MQTTv311 Version = 4
+	MQTTv5   Version = 5
 )
 
 // WriteTo operates on a FixedHeader and takes the option values and produces
@@ -118,59 +126,110 @@ func (c *ControlPacket) PacketType() string {
 // NewControlPacket takes a packetType and returns a pointer to a
 // ControlPacket where the VariableHeader field is a pointer to an
 // instance of a VariableHeader definition for that packetType
-func NewControlPacket(t byte) *ControlPacket {
+func NewControlPacket(t byte, v Version) *ControlPacket {
 	cp := &ControlPacket{FixedHeader: FixedHeader{Type: t}}
 	switch t {
 	case CONNECT:
-		cp.Content = &Connect{
+		content := &Connect{
 			ProtocolName:    "MQTT",
-			ProtocolVersion: 5,
-			Properties:      &Properties{},
+			ProtocolVersion: v,
 		}
+		if v == MQTTv5 {
+			content.Properties = &Properties{}
+		}
+		cp.Content = content
 	case CONNACK:
-		cp.Content = &Connack{Properties: &Properties{}}
+		content := &Connack{}
+		if v == MQTTv5 {
+			content.Properties = &Properties{}
+		}
+		cp.Content = content
 	case PUBLISH:
-		cp.Content = &Publish{Properties: &Properties{}}
+		content := &Publish{}
+		if v == MQTTv5 {
+			content.Properties = &Properties{}
+		}
+		cp.Content = content
 	case PUBACK:
-		cp.Content = &Puback{Properties: &Properties{}}
+		content := &Puback{}
+		if v == MQTTv5 {
+			content.Properties = &Properties{}
+		}
+		cp.Content = content
 	case PUBREC:
-		cp.Content = &Pubrec{Properties: &Properties{}}
+		content := &Pubrec{}
+		if v == MQTTv5 {
+			content.Properties = &Properties{}
+		}
+		cp.Content = content
 	case PUBREL:
 		cp.Flags = 2
-		cp.Content = &Pubrel{Properties: &Properties{}}
+		content := &Pubrel{}
+		if v == MQTTv5 {
+			content.Properties = &Properties{}
+		}
+		cp.Content = content
 	case PUBCOMP:
-		cp.Content = &Pubcomp{Properties: &Properties{}}
+		content := &Pubcomp{}
+		if v == MQTTv5 {
+			content.Properties = &Properties{}
+		}
+		cp.Content = content
 	case SUBSCRIBE:
 		cp.Flags = 2
-		cp.Content = &Subscribe{
+		content := &Subscribe{
 			Subscriptions: make(map[string]SubOptions),
-			Properties:    &Properties{},
 		}
+		if v == MQTTv5 {
+			content.Properties = &Properties{}
+		}
+		cp.Content = content
 	case SUBACK:
-		cp.Content = &Suback{Properties: &Properties{}}
+		content := &Suback{}
+		if v == MQTTv5 {
+			content.Properties = &Properties{}
+		}
+		cp.Content = content
 	case UNSUBSCRIBE:
 		cp.Flags = 2
-		cp.Content = &Unsubscribe{Properties: &Properties{}}
+		content := &Unsubscribe{}
+		if v == MQTTv5 {
+			content.Properties = &Properties{}
+		}
+		cp.Content = content
 	case UNSUBACK:
-		cp.Content = &Unsuback{Properties: &Properties{}}
+		content := &Unsuback{}
+		if v == MQTTv5 {
+			content.Properties = &Properties{}
+		}
+		cp.Content = content
 	case PINGREQ:
 		cp.Content = &Pingreq{}
 	case PINGRESP:
 		cp.Content = &Pingresp{}
 	case DISCONNECT:
-		cp.Content = &Disconnect{Properties: &Properties{}}
+		content := &Disconnect{}
+		if v == MQTTv5 {
+			content.Properties = &Properties{}
+		}
+		cp.Content = content
 	case AUTH:
 		cp.Flags = 1
-		cp.Content = &Auth{Properties: &Properties{}}
+		content := &Auth{}
+		if v == MQTTv5 {
+			content.Properties = &Properties{}
+		}
+		cp.Content = content
 	default:
 		return nil
 	}
+
 	return cp
 }
 
 // ReadPacket reads a control packet from a io.Reader and returns a completed
 // struct with the appropriate data
-func ReadPacket(r io.Reader) (*ControlPacket, error) {
+func ReadPacket(r io.Reader, v Version) (*ControlPacket, error) {
 	t := [1]byte{}
 	_, err := io.ReadFull(r, t[:])
 	if err != nil {
@@ -182,52 +241,7 @@ func ReadPacket(r io.Reader) (*ControlPacket, error) {
 	// }
 
 	pt := t[0] >> 4
-	cp := &ControlPacket{FixedHeader: FixedHeader{Type: pt}}
-	switch pt {
-	case CONNECT:
-		cp.Content = &Connect{
-			ProtocolName:    "MQTT",
-			ProtocolVersion: 5,
-			Properties:      &Properties{},
-		}
-	case CONNACK:
-		cp.Content = &Connack{Properties: &Properties{}}
-	case PUBLISH:
-		cp.Content = &Publish{Properties: &Properties{}}
-	case PUBACK:
-		cp.Content = &Puback{Properties: &Properties{}}
-	case PUBREC:
-		cp.Content = &Pubrec{Properties: &Properties{}}
-	case PUBREL:
-		cp.Flags = 2
-		cp.Content = &Pubrel{Properties: &Properties{}}
-	case PUBCOMP:
-		cp.Content = &Pubcomp{Properties: &Properties{}}
-	case SUBSCRIBE:
-		cp.Flags = 2
-		cp.Content = &Subscribe{
-			Subscriptions: make(map[string]SubOptions),
-			Properties:    &Properties{},
-		}
-	case SUBACK:
-		cp.Content = &Suback{Properties: &Properties{}}
-	case UNSUBSCRIBE:
-		cp.Flags = 2
-		cp.Content = &Unsubscribe{Properties: &Properties{}}
-	case UNSUBACK:
-		cp.Content = &Unsuback{Properties: &Properties{}}
-	case PINGREQ:
-		cp.Content = &Pingreq{}
-	case PINGRESP:
-		cp.Content = &Pingresp{}
-	case DISCONNECT:
-		cp.Content = &Disconnect{Properties: &Properties{}}
-	case AUTH:
-		cp.Flags = 1
-		cp.Content = &Auth{Properties: &Properties{}}
-	default:
-		return nil, fmt.Errorf("unknown packet type %d requested", pt)
-	}
+	cp := NewControlPacket(pt, v)
 
 	cp.Flags = t[0] & 0xF
 	if cp.Type == PUBLISH {

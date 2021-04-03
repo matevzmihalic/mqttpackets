@@ -2,6 +2,7 @@ package packets
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net"
 )
@@ -17,7 +18,7 @@ type Connect struct {
 	Properties      *Properties
 	WillProperties  *Properties
 	KeepAlive       uint16
-	ProtocolVersion byte
+	ProtocolVersion Version
 	WillQOS         byte
 	PasswordFlag    bool
 	UsernameFlag    bool
@@ -67,9 +68,14 @@ func (c *Connect) Unpack(r *bytes.Buffer) error {
 		return err
 	}
 
-	if c.ProtocolVersion, err = r.ReadByte(); err != nil {
+	version, err := r.ReadByte()
+	if err != nil {
 		return err
 	}
+	if version != 3 && version != 4 && version != 5 {
+		return fmt.Errorf("unknown protocol version: %d", version)
+	}
+	c.ProtocolVersion = Version(version)
 
 	flags, err := r.ReadByte()
 	if err != nil {
@@ -81,9 +87,14 @@ func (c *Connect) Unpack(r *bytes.Buffer) error {
 		return err
 	}
 
-	err = c.Properties.Unpack(r, CONNECT)
-	if err != nil {
-		return err
+	if c.ProtocolVersion == MQTTv5 {
+		if c.Properties == nil {
+			c.Properties = &Properties{}
+		}
+		err = c.Properties.Unpack(r, CONNECT)
+		if err != nil {
+			return err
+		}
 	}
 
 	c.ClientID, err = readString(r)
@@ -92,10 +103,12 @@ func (c *Connect) Unpack(r *bytes.Buffer) error {
 	}
 
 	if c.WillFlag {
-		c.WillProperties = &Properties{}
-		err = c.WillProperties.Unpack(r, CONNECT)
-		if err != nil {
-			return err
+		if c.ProtocolVersion == MQTTv5 {
+			c.WillProperties = &Properties{}
+			err = c.WillProperties.Unpack(r, CONNECT)
+			if err != nil {
+				return err
+			}
 		}
 		c.WillTopic, err = readString(r)
 		if err != nil {
@@ -129,18 +142,22 @@ func (c *Connect) Buffers() net.Buffers {
 	var cp bytes.Buffer
 
 	writeString(c.ProtocolName, &cp)
-	cp.WriteByte(c.ProtocolVersion)
+	cp.WriteByte(byte(c.ProtocolVersion))
 	cp.WriteByte(c.PackFlags())
 	writeUint16(c.KeepAlive, &cp)
-	idvp := c.Properties.Pack(CONNECT)
-	encodeVBIdirect(len(idvp), &cp)
-	cp.Write(idvp)
+	if c.ProtocolVersion == MQTTv5 {
+		idvp := c.Properties.Pack(CONNECT)
+		encodeVBIdirect(len(idvp), &cp)
+		cp.Write(idvp)
+	}
 
 	writeString(c.ClientID, &cp)
 	if c.WillFlag {
-		willIdvp := c.WillProperties.Pack(CONNECT)
-		encodeVBIdirect(len(willIdvp), &cp)
-		cp.Write(willIdvp)
+		if c.ProtocolVersion == MQTTv5 {
+			willIdvp := c.WillProperties.Pack(CONNECT)
+			encodeVBIdirect(len(willIdvp), &cp)
+			cp.Write(willIdvp)
+		}
 		writeString(c.WillTopic, &cp)
 		writeBinary(c.WillMessage, &cp)
 	}
