@@ -277,6 +277,7 @@ func ReadPacket(r io.Reader, v Version) (*ControlPacket, error) {
 // WriteTo writes a packet to an io.Writer, handling packing all the parts of
 // a control packet.
 func (c *ControlPacket) WriteTo(w io.Writer) (int64, error) {
+	c.remainingLength = 0
 	buffers := c.Content.Buffers()
 	for _, b := range buffers {
 		c.remainingLength += len(b)
