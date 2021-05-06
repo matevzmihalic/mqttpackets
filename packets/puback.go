@@ -35,7 +35,7 @@ func (p *Puback) Unpack(r *bytes.Buffer) error {
 	if err != nil {
 		return err
 	}
-	if !success {
+	if !success && p.Properties != nil {
 		p.ReasonCode, err = r.ReadByte()
 		if err != nil {
 			return err
@@ -55,6 +55,10 @@ func (p *Puback) Unpack(r *bytes.Buffer) error {
 func (p *Puback) Buffers() net.Buffers {
 	var b bytes.Buffer
 	writeUint16(p.PacketID, &b)
+	if p.Properties == nil {
+		return net.Buffers{b.Bytes()}
+	}
+
 	b.WriteByte(p.ReasonCode)
 	idvp := p.Properties.Pack(PUBACK)
 	propLen := encodeVBI(len(idvp))

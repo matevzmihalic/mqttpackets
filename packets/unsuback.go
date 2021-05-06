@@ -32,9 +32,11 @@ func (u *Unsuback) Unpack(r *bytes.Buffer) error {
 		return err
 	}
 
-	err = u.Properties.Unpack(r, UNSUBACK)
-	if err != nil {
-		return err
+	if u.Properties != nil {
+		err = u.Properties.Unpack(r, UNSUBACK)
+		if err != nil {
+			return err
+		}
 	}
 
 	u.Reasons = r.Bytes()
@@ -46,6 +48,10 @@ func (u *Unsuback) Unpack(r *bytes.Buffer) error {
 func (u *Unsuback) Buffers() net.Buffers {
 	var b bytes.Buffer
 	writeUint16(u.PacketID, &b)
+	if u.Properties == nil {
+		return net.Buffers{b.Bytes(), u.Reasons}
+	}
+
 	idvp := u.Properties.Pack(UNSUBACK)
 	propLen := encodeVBI(len(idvp))
 	return net.Buffers{b.Bytes(), propLen, idvp, u.Reasons}

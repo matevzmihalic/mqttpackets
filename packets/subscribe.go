@@ -9,20 +9,22 @@ import (
 // Subscribe is the Variable Header definition for a Subscribe control packet
 type Subscribe struct {
 	Properties    *Properties
-	Subscriptions map[string]SubOptions
+	Subscriptions []Subscription
 	PacketID      uint16
 }
 
-// SubOptions is the struct representing the options for a subscription
-type SubOptions struct {
+// Subscription is the struct representing a subscription and its options
+type Subscription struct {
+	Topic             string
 	QoS               byte
 	RetainHandling    byte
 	NoLocal           bool
 	RetainAsPublished bool
 }
 
-// Pack is the implementation of the interface required function for a packet
-func (s *SubOptions) Pack() byte {
+// WriteTo writes a subscription to buffer
+func (s *Subscription) WriteTo(b *bytes.Buffer) {
+	writeString(s.Topic, b)
 	var ret byte
 	ret |= s.QoS & 0x03
 	if s.NoLocal {
@@ -32,12 +34,17 @@ func (s *SubOptions) Pack() byte {
 		ret |= 1 << 3
 	}
 	ret |= s.RetainHandling & 0x30
-
-	return ret
+	b.WriteByte(ret)
 }
 
 // Unpack is the implementation of the interface required function for a packet
-func (s *SubOptions) Unpack(r *bytes.Buffer) error {
+func (s *Subscription) Unpack(r *bytes.Buffer) error {
+	topic, err := readString(r)
+	if err != nil {
+		return err
+	}
+	s.Topic = topic
+
 	b, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -59,21 +66,19 @@ func (s *Subscribe) Unpack(r *bytes.Buffer) error {
 		return err
 	}
 
-	err = s.Properties.Unpack(r, SUBSCRIBE)
-	if err != nil {
-		return err
-	}
-
-	for r.Len() > 0 {
-		var so SubOptions
-		t, err := readString(r)
+	if s.Properties != nil {
+		err = s.Properties.Unpack(r, SUBSCRIBE)
 		if err != nil {
 			return err
 		}
+	}
+
+	for r.Len() > 0 {
+		var so Subscription
 		if err = so.Unpack(r); err != nil {
 			return err
 		}
-		s.Subscriptions[t] = so
+		s.Subscriptions = append(s.Subscriptions, so)
 	}
 
 	return nil
@@ -84,10 +89,13 @@ func (s *Subscribe) Buffers() net.Buffers {
 	var b bytes.Buffer
 	writeUint16(s.PacketID, &b)
 	var subs bytes.Buffer
-	for t, o := range s.Subscriptions {
-		writeString(t, &subs)
-		subs.WriteByte(o.Pack())
+	for _, o := range s.Subscriptions {
+		o.WriteTo(&subs)
 	}
+	if s.Properties == nil {
+		return net.Buffers{b.Bytes(), subs.Bytes()}
+	}
+
 	idvp := s.Properties.Pack(SUBSCRIBE)
 	propLen := encodeVBI(len(idvp))
 	return net.Buffers{b.Bytes(), propLen, idvp, subs.Bytes()}

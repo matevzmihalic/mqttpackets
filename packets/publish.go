@@ -32,9 +32,11 @@ func (p *Publish) Unpack(r *bytes.Buffer) error {
 		}
 	}
 
-	err = p.Properties.Unpack(r, PUBLISH)
-	if err != nil {
-		return err
+	if p.Properties != nil {
+		err = p.Properties.Unpack(r, PUBLISH)
+		if err != nil {
+			return err
+		}
 	}
 
 	p.Payload, err = ioutil.ReadAll(r)
@@ -52,10 +54,13 @@ func (p *Publish) Buffers() net.Buffers {
 	if p.QoS > 0 {
 		writeUint16(p.PacketID, &b)
 	}
+	if p.Properties == nil {
+		return net.Buffers{b.Bytes(), p.Payload}
+	}
+
 	idvp := p.Properties.Pack(PUBLISH)
 	encodeVBIdirect(len(idvp), &b)
 	return net.Buffers{b.Bytes(), idvp, p.Payload}
-
 }
 
 // WriteTo is the implementation of the interface required function for a packet

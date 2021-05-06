@@ -21,9 +21,11 @@ func (u *Unsubscribe) Unpack(r *bytes.Buffer) error {
 		return err
 	}
 
-	err = u.Properties.Unpack(r, UNSUBSCRIBE)
-	if err != nil {
-		return err
+	if u.Properties != nil {
+		err = u.Properties.Unpack(r, UNSUBSCRIBE)
+		if err != nil {
+			return err
+		}
 	}
 
 	for {
@@ -48,6 +50,10 @@ func (u *Unsubscribe) Buffers() net.Buffers {
 	for _, t := range u.Topics {
 		writeString(t, &topics)
 	}
+	if u.Properties == nil {
+		return net.Buffers{b.Bytes(), topics.Bytes()}
+	}
+
 	idvp := u.Properties.Pack(UNSUBSCRIBE)
 	propLen := encodeVBI(len(idvp))
 	return net.Buffers{b.Bytes(), propLen, idvp, topics.Bytes()}

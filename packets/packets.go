@@ -126,6 +126,7 @@ func (c *ControlPacket) PacketType() string {
 // NewControlPacket takes a packetType and returns a pointer to a
 // ControlPacket where the VariableHeader field is a pointer to an
 // instance of a VariableHeader definition for that packetType
+// Packet will be created as v3 if Version is not set correctly.
 func NewControlPacket(t byte, v Version) *ControlPacket {
 	cp := &ControlPacket{FixedHeader: FixedHeader{Type: t}}
 	switch t {
@@ -133,6 +134,9 @@ func NewControlPacket(t byte, v Version) *ControlPacket {
 		content := &Connect{
 			ProtocolName:    "MQTT",
 			ProtocolVersion: v,
+		}
+		if v == MQTTv31 {
+			content.ProtocolName = "MQIsdp"
 		}
 		if v == MQTTv5 {
 			content.Properties = &Properties{}
@@ -177,9 +181,7 @@ func NewControlPacket(t byte, v Version) *ControlPacket {
 		cp.Content = content
 	case SUBSCRIBE:
 		cp.Flags = 2
-		content := &Subscribe{
-			Subscriptions: make(map[string]SubOptions),
-		}
+		content := &Subscribe{}
 		if v == MQTTv5 {
 			content.Properties = &Properties{}
 		}
@@ -228,7 +230,9 @@ func NewControlPacket(t byte, v Version) *ControlPacket {
 }
 
 // ReadPacket reads a control packet from a io.Reader and returns a completed
-// struct with the appropriate data
+// struct with the appropriate data.
+// Version can be set to 0 when reading a Connect packet.
+// Packet will be parsed as v3 if Version is not set correctly when reading other types of packets.
 func ReadPacket(r io.Reader, v Version) (*ControlPacket, error) {
 	t := [1]byte{}
 	_, err := io.ReadFull(r, t[:])

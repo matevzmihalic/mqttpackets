@@ -47,6 +47,10 @@ const (
 
 // Unpack is the implementation of the interface required function for a packet
 func (d *Disconnect) Unpack(r *bytes.Buffer) error {
+	if d.Properties == nil {
+		return nil
+	}
+
 	var err error
 	d.ReasonCode, err = r.ReadByte()
 	if err != nil {
@@ -63,6 +67,10 @@ func (d *Disconnect) Unpack(r *bytes.Buffer) error {
 
 // Buffers is the implementation of the interface required function for a packet
 func (d *Disconnect) Buffers() net.Buffers {
+	if d.Properties == nil {
+		return net.Buffers{}
+	}
+
 	idvp := d.Properties.Pack(DISCONNECT)
 	propLen := encodeVBI(len(idvp))
 	n := net.Buffers{[]byte{d.ReasonCode}, propLen}

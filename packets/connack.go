@@ -26,6 +26,9 @@ func (c *Connack) Unpack(r *bytes.Buffer) error {
 		return err
 	}
 
+	if c.Properties == nil {
+		return nil
+	}
 	err = c.Properties.Unpack(r, CONNACK)
 	if err != nil {
 		return err
@@ -44,6 +47,9 @@ func (c *Connack) Buffers() net.Buffers {
 		header.WriteByte(0)
 	}
 	header.WriteByte(c.ReasonCode)
+	if c.Properties == nil {
+		return net.Buffers{header.Bytes()}
+	}
 
 	idvp := c.Properties.Pack(CONNACK)
 	propLen := encodeVBI(len(idvp))

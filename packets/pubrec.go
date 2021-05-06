@@ -35,7 +35,7 @@ func (p *Pubrec) Unpack(r *bytes.Buffer) error {
 	if err != nil {
 		return err
 	}
-	if !success {
+	if !success && p.Properties != nil {
 		p.ReasonCode, err = r.ReadByte()
 		if err != nil {
 			return err
@@ -56,6 +56,10 @@ func (p *Pubrec) Unpack(r *bytes.Buffer) error {
 func (p *Pubrec) Buffers() net.Buffers {
 	var b bytes.Buffer
 	writeUint16(p.PacketID, &b)
+	if p.Properties == nil {
+		return net.Buffers{b.Bytes()}
+	}
+
 	b.WriteByte(p.ReasonCode)
 	n := net.Buffers{b.Bytes()}
 	idvp := p.Properties.Pack(PUBREC)
