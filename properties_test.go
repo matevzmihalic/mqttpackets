@@ -1,4 +1,4 @@
-package packets
+package mqttpackets
 
 import (
 	"fmt"
@@ -66,8 +66,8 @@ func TestPropertiess(t *testing.T) {
 		t.Fatalf("'requestProblemInfo' is valid for 'CONNECT' packets")
 	}
 
-	if !ValidateID(CONNECT, PropWillDelayInterval) {
-		t.Fatalf("'willDelayInterval' is valid for 'CONNECT' packets")
+	if !ValidateID(will, PropWillDelayInterval) {
+		t.Fatalf("'willDelayInterval' is valid for 'will' packets")
 	}
 
 	if !ValidateID(CONNECT, PropRequestResponseInfo) {
