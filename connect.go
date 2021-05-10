@@ -88,9 +88,7 @@ func (c *Connect) Unpack(r *bytes.Buffer) error {
 	}
 
 	if c.ProtocolVersion == MQTTv5 {
-		if c.Properties == nil {
-			c.Properties = &Properties{}
-		}
+		c.Properties = &Properties{}
 		err = c.Properties.Unpack(r, CONNECT)
 		if err != nil {
 			return err
@@ -105,7 +103,7 @@ func (c *Connect) Unpack(r *bytes.Buffer) error {
 	if c.WillFlag {
 		if c.ProtocolVersion == MQTTv5 {
 			c.WillProperties = &Properties{}
-			err = c.WillProperties.Unpack(r, CONNECT)
+			err = c.WillProperties.Unpack(r, will)
 			if err != nil {
 				return err
 			}
@@ -154,7 +152,7 @@ func (c *Connect) Buffers() net.Buffers {
 	writeString(c.ClientID, &cp)
 	if c.WillFlag {
 		if c.ProtocolVersion == MQTTv5 {
-			willIdvp := c.WillProperties.Pack(CONNECT)
+			willIdvp := c.WillProperties.Pack(will)
 			encodeVBIdirect(len(willIdvp), &cp)
 			cp.Write(willIdvp)
 		}

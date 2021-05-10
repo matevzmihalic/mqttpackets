@@ -675,14 +675,16 @@ func (i *Properties) Unpack(r *bytes.Buffer, p byte) error {
 	return nil
 }
 
+const will = byte(200)
+
 // ValidProperties is a map of the various properties and the
 // PacketTypes that property is valid for.
 var ValidProperties = map[byte]map[byte]struct{}{
-	PropPayloadFormat:          {PUBLISH: {}},
-	PropMessageExpiry:          {PUBLISH: {}},
-	PropContentType:            {PUBLISH: {}},
-	PropResponseTopic:          {PUBLISH: {}},
-	PropCorrelationData:        {PUBLISH: {}},
+	PropPayloadFormat:          {PUBLISH: {}, will: {}},
+	PropMessageExpiry:          {PUBLISH: {}, will: {}},
+	PropContentType:            {PUBLISH: {}, will: {}},
+	PropResponseTopic:          {PUBLISH: {}, will: {}},
+	PropCorrelationData:        {PUBLISH: {}, will: {}},
 	PropTopicAlias:             {PUBLISH: {}},
 	PropSubscriptionIdentifier: {PUBLISH: {}, SUBSCRIBE: {}},
 	PropSessionExpiryInterval:  {CONNECT: {}, CONNACK: {}, DISCONNECT: {}},
@@ -696,7 +698,7 @@ var ValidProperties = map[byte]map[byte]struct{}{
 	PropAuthMethod:             {CONNECT: {}, CONNACK: {}, AUTH: {}},
 	PropAuthData:               {CONNECT: {}, CONNACK: {}, AUTH: {}},
 	PropRequestProblemInfo:     {CONNECT: {}},
-	PropWillDelayInterval:      {CONNECT: {}},
+	PropWillDelayInterval:      {will: {}},
 	PropRequestResponseInfo:    {CONNECT: {}},
 	PropServerReference:        {CONNACK: {}, DISCONNECT: {}},
 	PropReasonString:           {CONNACK: {}, PUBACK: {}, PUBREC: {}, PUBREL: {}, PUBCOMP: {}, SUBACK: {}, UNSUBACK: {}, DISCONNECT: {}, AUTH: {}},
@@ -704,7 +706,7 @@ var ValidProperties = map[byte]map[byte]struct{}{
 	PropTopicAliasMaximum:      {CONNECT: {}, CONNACK: {}},
 	PropMaximumQOS:             {CONNECT: {}, CONNACK: {}},
 	PropMaximumPacketSize:      {CONNECT: {}, CONNACK: {}},
-	PropUser:                   {CONNECT: {}, CONNACK: {}, PUBLISH: {}, PUBACK: {}, PUBREC: {}, PUBREL: {}, PUBCOMP: {}, SUBSCRIBE: {}, UNSUBSCRIBE: {}, SUBACK: {}, UNSUBACK: {}, DISCONNECT: {}, AUTH: {}},
+	PropUser:                   {CONNECT: {}, CONNACK: {}, PUBLISH: {}, PUBACK: {}, PUBREC: {}, PUBREL: {}, PUBCOMP: {}, SUBSCRIBE: {}, UNSUBSCRIBE: {}, SUBACK: {}, UNSUBACK: {}, DISCONNECT: {}, AUTH: {}, will: {}},
 }
 
 // ValidateID takes a PacketType and a property name and returns
