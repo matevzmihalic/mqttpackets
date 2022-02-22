@@ -239,13 +239,12 @@ func ReadPacket(r io.Reader, v Version) (*ControlPacket, error) {
 	if err != nil {
 		return nil, err
 	}
-	// cp := NewControlPacket(PacketType(t[0] >> 4))
-	// if cp == nil {
-	// 	return nil, fmt.Errorf("invalid packet type requested, %d", t[0]>>4)
-	// }
 
 	pt := t[0] >> 4
 	cp := NewControlPacket(pt, v)
+	if cp == nil {
+		return nil, fmt.Errorf("invalid packet type requested, %d", pt)
+	}
 
 	cp.Flags = t[0] & 0xF
 	if cp.Type == PUBLISH {
